@@ -1,0 +1,12 @@
+{
+  "validation_error": "Validation error occurred",
+  "auth": {
+    "email_exists": "A user with this email address already exists",
+    "invalid_credentials": "Invalid email or password",
+    "unauthorized": "Authentication required",
+    "forbidden": "Access denied",
+    "token_required": "Authentication token is required",
+    "invalid_token": "Invalid or expired authentication token",
+    "user_not_found": "Authenticated user not found or deactivated"
+  }
+}

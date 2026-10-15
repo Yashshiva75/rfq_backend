@@ -6,10 +6,12 @@
 
 import passportAuth from "./passportAuth";
 import authorization from "./authorization";
+import uploadMiddleware from "./upload.middleware";
 
-export { passportAuth, authorization };
+export { passportAuth, authorization, uploadMiddleware };
 
 export default {
   passportAuth,
   authorization,
+  uploadMiddleware,
 };

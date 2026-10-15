@@ -126,6 +126,46 @@ class UserRoleRepo {
       throw error;
     }
   }
+
+  /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
+  🔱: @author : Yash shiva
+  ✨: @uses : Update permissions assigned to a role
+  👑: @created : 16/10/2026
+  ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
+  async updateRolePermissions(roleId: number, permissionIds: number[]) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // 1. Remove existing permissions for this role
+        await tx.rolePermission.deleteMany({
+          where: { roleId },
+        });
+
+        // 2. Assign new permissions
+        if (permissionIds && permissionIds.length > 0) {
+          await tx.rolePermission.createMany({
+            data: permissionIds.map((permId) => ({
+              roleId,
+              permissionId: permId,
+            })),
+          });
+        }
+
+        // 3. Return updated role with permissions
+        return await tx.role.findUnique({
+          where: { id: roleId },
+          include: {
+            permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        });
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default new UserRoleRepo();

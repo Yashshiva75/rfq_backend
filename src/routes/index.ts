@@ -12,6 +12,8 @@ import quotation from "../app/quotation/routes/quotation.route";
 import files from "../app/files/routes/file.route";
 import history from "../app/history/routes/history.route";
 import notification from "../app/notification/routes/notification.route";
+import rfqController from "../app/rfq/controllers/rfq.controller";
+import { passportAuth } from "../middleware";
 
 // Import Thirdparty
 import express from "express";
@@ -49,6 +51,10 @@ app.get(["/health", "/v1/health"], async function (req, res, next) {
 });
 
 const path = "/v1";
+
+// Global Convenience Routes for Top Search Bar & Navigation Sidebar
+app.get(path + "/search", passportAuth.authenticate, rfqController.search);
+app.get(path + "/navigation/summary", passportAuth.authenticate, rfqController.navigationSummary);
 
 app.use(path + "/auth", auth);
 app.use(path + "/user", user);

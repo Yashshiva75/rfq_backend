@@ -18,6 +18,16 @@ router.post(
   rfqController.create
 );
 
+// Global search across RFQs, Line Items, and Categories (for Search Bar)
+router.get("/search", passportAuth.authenticate, rfqController.search);
+
+// Navigation summary (badge counters, role stats, active category breakdown)
+router.get(
+  "/navigation/summary",
+  passportAuth.authenticate,
+  rfqController.navigationSummary
+);
+
 // List RFQs (Personal view by user ID, Admin view shows all, Request only)
 router.get("/", passportAuth.authenticate, rfqController.list);
 

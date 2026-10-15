@@ -3,7 +3,8 @@ import config from "../../../config/constant";
 import prisma from "../../../library/prisma.library";
 
 // Import Thirdparty
-import { RfqStatus } from "../../../generated/prisma/enums";
+import { RfqStatus, QuotationStatus } from "../../../generated/prisma/enums";
+import rfqHelper from "../helper/rfq.helper";
 
 export interface CreateRfqLineItemInput {
   name: string;
@@ -174,7 +175,16 @@ class RfqRepo {
     filterScope?: "my" | "all";
     status?: string;
     search?: string;
+    keyword?: string;
+    location?: string;
     category?: string;
+    categoryId?: number;
+    deadlineBefore?: string | Date;
+    deadlineAfter?: string | Date;
+    minBudget?: number;
+    maxBudget?: number;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
     openOnly?: boolean;
     page?: number;
     limit?: number;
@@ -206,7 +216,6 @@ class RfqRepo {
         const rawStatus = params.status.toUpperCase();
         const mappedStatus = rawStatus === "OPEN" ? RfqStatus.PUBLISHED : rawStatus;
         if (Object.values(RfqStatus).includes(mappedStatus as any)) {
-          // If vendor, they view PUBLISHED RFQs across all buyers (never drafts of other users)
           if (!params.isVendor) {
             where.status = mappedStatus as RfqStatus;
           } else if (mappedStatus === RfqStatus.PUBLISHED) {
@@ -221,38 +230,76 @@ class RfqRepo {
         where.deadline = { gte: new Date() };
       }
 
-      // Search query across title, description, location
-      if (params.search && params.search.trim()) {
-        const search = params.search.trim();
+      // Search query across title, description, location, AND line item names
+      const searchTerm = (params.keyword || params.search || "").trim();
+      if (searchTerm) {
         where.OR = [
-          { title: { contains: search, mode: "insensitive" } },
-          { description: { contains: search, mode: "insensitive" } },
-          { location: { contains: search, mode: "insensitive" } },
+          { title: { contains: searchTerm, mode: "insensitive" } },
+          { description: { contains: searchTerm, mode: "insensitive" } },
+          { location: { contains: searchTerm, mode: "insensitive" } },
+          { lineItems: { some: { name: { contains: searchTerm, mode: "insensitive" } } } },
         ];
       }
 
-      // Category filter
-      if (params.category && params.category.trim()) {
-        where.categories = {
-          some: {
-            category: {
-              name: {
-                equals: params.category.trim(),
-                mode: "insensitive",
-              },
-            },
-          },
-        };
+      // Explicit location filter
+      if (params.location && params.location.trim()) {
+        where.location = { contains: params.location.trim(), mode: "insensitive" };
       }
 
-      // Only query RFQ Requests (no quotations included)
+      // Category filter (supports name or numeric ID)
+      if (params.categoryId) {
+        where.categories = { some: { categoryId: Number(params.categoryId) } };
+      } else if (params.category && String(params.category).trim()) {
+        const catStr = String(params.category).trim();
+        const numericCatId = Number(catStr);
+        if (!isNaN(numericCatId) && numericCatId > 0) {
+          where.categories = { some: { categoryId: numericCatId } };
+        } else {
+          where.categories = {
+            some: {
+              category: {
+                name: {
+                  equals: catStr,
+                  mode: "insensitive",
+                },
+              },
+            },
+          };
+        }
+      }
+
+      // Deadline filters
+      if (params.deadlineBefore || params.deadlineAfter) {
+        where.deadline = where.deadline || {};
+        if (params.deadlineBefore) where.deadline.lte = new Date(params.deadlineBefore);
+        if (params.deadlineAfter) where.deadline.gte = new Date(params.deadlineAfter);
+      }
+
+      // Budget filters
+      if (params.minBudget !== undefined || params.maxBudget !== undefined) {
+        where.optionalBudget = where.optionalBudget || {};
+        if (params.minBudget !== undefined) where.optionalBudget.gte = Number(params.minBudget);
+        if (params.maxBudget !== undefined) where.optionalBudget.lte = Number(params.maxBudget);
+      }
+
+      // Sorting
+      let orderBy: any = { createdAt: "desc" };
+      if (params.sortBy) {
+        const order = params.sortOrder === "asc" ? "asc" : "desc";
+        if (params.sortBy === "deadline") orderBy = { deadline: order };
+        else if (params.sortBy === "budget" || params.sortBy === "totalPriceRfq") orderBy = { totalPriceRfq: order };
+        else if (params.sortBy === "title") orderBy = { title: order };
+        else if (params.sortBy === "createdAt") orderBy = { createdAt: order };
+      }
+
+      // Query RFQ Requests with total count
       const [total, rfqs] = await Promise.all([
         prisma.rFQ.count({ where }),
         prisma.rFQ.findMany({
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: "desc" },
+          orderBy,
           include: {
             categories: {
               include: {
@@ -280,6 +327,291 @@ class RfqRepo {
           limit,
           totalPages: Math.ceil(total / limit),
         },
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
+  🔱: @author : Yash shiva
+  ✨: @uses : Global instant search across RFQs, Line Items, and Categories
+  👑: @created : 16/10/2026
+  ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
+  async searchGlobal(searchQuery: string, user: any, limit = 8) {
+    try {
+      const q = (searchQuery || "").trim();
+      if (!q) {
+        return { rfqs: [], categories: [], quotations: [] };
+      }
+
+      const isAdmin = rfqHelper.isAdmin(user);
+      const isVendor = rfqHelper.isVendor(user);
+
+      // RFQ where condition based on role
+      const rfqWhere: any = {
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } },
+          { location: { contains: q, mode: "insensitive" } },
+          { lineItems: { some: { name: { contains: q, mode: "insensitive" } } } },
+        ],
+      };
+
+      if (isVendor) {
+        rfqWhere.status = RfqStatus.PUBLISHED;
+      } else if (!isAdmin) {
+        // Buyer searches their own RFQs
+        rfqWhere.createdById = user.id;
+      }
+
+      const [rfqs, categories, quotations] = await Promise.all([
+        prisma.rFQ.findMany({
+          where: rfqWhere,
+          take: limit,
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            location: true,
+            currency: true,
+            deadline: true,
+            totalPriceRfq: true,
+            categories: {
+              select: {
+                category: { select: { id: true, name: true } },
+              },
+            },
+            lineItems: {
+              where: { name: { contains: q, mode: "insensitive" } },
+              select: { id: true, name: true, quantity: true, unit: true },
+              take: 2,
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+
+        prisma.category.findMany({
+          where: { name: { contains: q, mode: "insensitive" } },
+          take: 5,
+          select: {
+            id: true,
+            name: true,
+            _count: {
+              select: {
+                rfqs: {
+                  where: {
+                    rfq: { status: RfqStatus.PUBLISHED },
+                  },
+                },
+              },
+            },
+          },
+        }),
+
+        // Quotations (strictly scoped to user to protect competitor quotes)
+        isVendor
+          ? prisma.quotation.findMany({
+              where: {
+                vendorId: user.id,
+                OR: [
+                  { quoteNo: { contains: q, mode: "insensitive" } },
+                  { rfq: { title: { contains: q, mode: "insensitive" } } },
+                ],
+              },
+              take: 5,
+              select: {
+                id: true,
+                quoteNo: true,
+                status: true,
+                totalPriceQuote: true,
+                rfq: { select: { id: true, title: true } },
+              },
+            })
+          : !isAdmin
+          ? prisma.quotation.findMany({
+              where: {
+                rfq: { createdById: user.id },
+                OR: [
+                  { quoteNo: { contains: q, mode: "insensitive" } },
+                  { rfq: { title: { contains: q, mode: "insensitive" } } },
+                ],
+              },
+              take: 5,
+              select: {
+                id: true,
+                quoteNo: true,
+                status: true,
+                totalPriceQuote: true,
+                rfq: { select: { id: true, title: true } },
+              },
+            })
+          : prisma.quotation.findMany({
+              where: {
+                OR: [
+                  { quoteNo: { contains: q, mode: "insensitive" } },
+                  { rfq: { title: { contains: q, mode: "insensitive" } } },
+                ],
+              },
+              take: 5,
+              select: {
+                id: true,
+                quoteNo: true,
+                status: true,
+                totalPriceQuote: true,
+                rfq: { select: { id: true, title: true } },
+              },
+            }),
+      ]);
+
+      return {
+        query: q,
+        rfqs: rfqs.map((r) => ({
+          ...r,
+          categories: r.categories.map((c) => c.category.name),
+        })),
+        categories: categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          rfqCount: c._count.rfqs,
+        })),
+        quotations,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
+  🔱: @author : Yash shiva
+  ✨: @uses : Navigation summary badge counts and category breakdown
+  👑: @created : 16/10/2026
+  ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
+  async getNavigationStats(user: any) {
+    try {
+      const isAdmin = rfqHelper.isAdmin(user);
+      const isVendor = rfqHelper.isVendor(user);
+      const userId = user.id;
+
+      // Top categories with active published RFQ count
+      const categoriesWithCount = await prisma.category.findMany({
+        take: 10,
+        select: {
+          id: true,
+          name: true,
+          _count: {
+            select: {
+              rfqs: {
+                where: {
+                  rfq: { status: RfqStatus.PUBLISHED },
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+
+      const formattedCategories = categoriesWithCount.map((c) => ({
+        id: c.id,
+        name: c.name,
+        activeRfqCount: c._count.rfqs,
+      }));
+
+      if (isVendor) {
+        // Vendor navigation counts
+        const [openRfqs, myQuotesSubmitted, myQuotesShortlisted, myQuotesAccepted, myQuotesRejected] =
+          await Promise.all([
+            prisma.rFQ.count({
+              where: {
+                status: RfqStatus.PUBLISHED,
+                deadline: { gte: new Date() },
+              },
+            }),
+            prisma.quotation.count({
+              where: { vendorId: userId, status: QuotationStatus.SUBMITTED },
+            }),
+            prisma.quotation.count({
+              where: { vendorId: userId, status: QuotationStatus.SHORTLISTED },
+            }),
+            prisma.quotation.count({
+              where: { vendorId: userId, status: QuotationStatus.ACCEPTED },
+            }),
+            prisma.quotation.count({
+              where: { vendorId: userId, status: QuotationStatus.REJECTED },
+            }),
+          ]);
+
+        const totalMyQuotes =
+          myQuotesSubmitted + myQuotesShortlisted + myQuotesAccepted + myQuotesRejected;
+
+        return {
+          role: "vendor",
+          badges: {
+            openRfqs,
+            myQuotes: totalMyQuotes,
+            submittedQuotes: myQuotesSubmitted,
+            shortlistedQuotes: myQuotesShortlisted,
+            acceptedQuotes: myQuotesAccepted,
+            rejectedQuotes: myQuotesRejected,
+          },
+          categories: formattedCategories,
+        };
+      }
+
+      if (isAdmin) {
+        // Admin global navigation counts
+        const [totalRfqs, totalQuotes, totalUsers, draftRfqs, publishedRfqs, closedRfqs, awardedRfqs] =
+          await Promise.all([
+            prisma.rFQ.count(),
+            prisma.quotation.count(),
+            prisma.user.count(),
+            prisma.rFQ.count({ where: { status: RfqStatus.DRAFT } }),
+            prisma.rFQ.count({ where: { status: RfqStatus.PUBLISHED } }),
+            prisma.rFQ.count({ where: { status: RfqStatus.CLOSED } }),
+            prisma.rFQ.count({ where: { status: RfqStatus.AWARDED } }),
+          ]);
+
+        return {
+          role: "admin",
+          badges: {
+            totalRfqs,
+            draftRfqs,
+            publishedRfqs,
+            closedRfqs,
+            awardedRfqs,
+            totalQuotes,
+            totalUsers,
+          },
+          categories: formattedCategories,
+        };
+      }
+
+      // Default: Buyer navigation counts
+      const [draftRfqs, publishedRfqs, closedRfqs, awardedRfqs, totalQuotesReceived] =
+        await Promise.all([
+          prisma.rFQ.count({ where: { createdById: userId, status: RfqStatus.DRAFT } }),
+          prisma.rFQ.count({ where: { createdById: userId, status: RfqStatus.PUBLISHED } }),
+          prisma.rFQ.count({ where: { createdById: userId, status: RfqStatus.CLOSED } }),
+          prisma.rFQ.count({ where: { createdById: userId, status: RfqStatus.AWARDED } }),
+          prisma.quotation.count({ where: { rfq: { createdById: userId } } }),
+        ]);
+
+      const totalBuyerRfqs = draftRfqs + publishedRfqs + closedRfqs + awardedRfqs;
+
+      return {
+        role: "buyer",
+        badges: {
+          totalRfqs: totalBuyerRfqs,
+          draftRfqs,
+          publishedRfqs,
+          closedRfqs,
+          awardedRfqs,
+          totalQuotesReceived,
+        },
+        categories: formattedCategories,
       };
     } catch (error) {
       throw error;

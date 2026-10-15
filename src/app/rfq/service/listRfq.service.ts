@@ -35,7 +35,24 @@ const listRfq = async (container: any) => {
     const isAdmin = rfqHelper.isAdmin(user);
     const isVendor = rfqHelper.isVendor(user);
 
-    const { status, search, category, page, limit, filterScope, openOnly } = query || {};
+    const {
+      status,
+      search,
+      keyword,
+      location,
+      category,
+      categoryId,
+      deadlineBefore,
+      deadlineAfter,
+      minBudget,
+      maxBudget,
+      sortBy,
+      sortOrder,
+      page,
+      limit,
+      filterScope,
+      openOnly,
+    } = query || {};
 
     // Determine target user scoping:
     // - Admin: sees all RFQs (or filtered by query.userId if provided)
@@ -45,15 +62,24 @@ const listRfq = async (container: any) => {
       ? (isAdmin && query?.userId ? Number(query.userId) : undefined)
       : user.id;
 
-    // Fetch RFQs - returns Request only, no quotations
+    // Fetch RFQs with full search, filter, and sorting
     const result = await rfqRepo.getRfqs({
       userId: filterUserId,
       isAdmin,
       isVendor,
       filterScope: filterScope as "my" | "all",
       status: status as string,
-      search: search as string,
+      search: (keyword || search) as string,
+      keyword: (keyword || search) as string,
+      location: location as string,
       category: category as string,
+      categoryId: categoryId ? Number(categoryId) : undefined,
+      deadlineBefore: deadlineBefore as string,
+      deadlineAfter: deadlineAfter as string,
+      minBudget: minBudget ? Number(minBudget) : undefined,
+      maxBudget: maxBudget ? Number(maxBudget) : undefined,
+      sortBy: sortBy as string,
+      sortOrder: (sortOrder as "asc" | "desc") || "desc",
       openOnly: openOnly === "true" || openOnly === true,
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,

@@ -1,5 +1,6 @@
 import express, { NextFunction, Request, Response, Application } from "express";
 import path from "path";
+import fs from "fs";
 import router from "./routes";
 import config from "./config/constant";
 
@@ -13,6 +14,11 @@ class App {
 
   private async defaults(): Promise<void> {
     const imageDir = path.join(__dirname, "/../assets");
+    const uploadsDir = path.join(process.cwd(), "uploads");
+
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
 
     this.express
       .use((req: Request, res: Response, next: NextFunction) => {
@@ -31,7 +37,8 @@ class App {
       .use(express.json({ limit: "150mb" }))
       .use(express.raw())
       .use(router)
-      .use("/assets", express.static(imageDir));
+      .use("/assets", express.static(imageDir))
+      .use("/uploads", express.static(uploadsDir));
   }
 }
 

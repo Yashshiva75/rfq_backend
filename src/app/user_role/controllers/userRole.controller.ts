@@ -1,5 +1,6 @@
 // Import Services
 import listRoles from "../service/listRoles.service";
+import updateRolePermissions from "../service/updateRolePermissions.service";
 
 // Import Helpers
 import responseHelper from "../../../helpers/response.helper";
@@ -37,6 +38,39 @@ class UserRoleController {
       //
       // send the response
       //
+      res
+        .status(StatusCodes.OK)
+        .json(await responseHelper.successResponse(container.output));
+    } catch (error: any) {
+      res
+        .status(await responseHelper.getStatusCode(error))
+        .json(await responseHelper.validationErrorResponse(error));
+    }
+  }
+
+  /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
+  🔱: @author : Yash shiva
+  ✨: @uses : Update role permissions (admin only)
+  👑: @created : 16/10/2026
+  ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
+  async updatePermissions(req: any, res: Response, next?: NextFunction) {
+    try {
+      const container: any = {
+        input: {
+          body: req.body,
+          params: req.params,
+          query: req.query,
+          headers: req.headers,
+          logged_in_user: req.logged_in_user || req.user,
+        },
+        derived: {},
+        output: {
+          result: {},
+        },
+      };
+
+      await updateRolePermissions(container);
+
       res
         .status(StatusCodes.OK)
         .json(await responseHelper.successResponse(container.output));

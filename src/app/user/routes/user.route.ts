@@ -24,4 +24,12 @@ router.get(
 // Get user by ID (Authenticated)
 router.get("/:id", passportAuth.authenticate, userController.getById);
 
+// Assign role to user (Admin only)
+router.put(
+  "/:id/role",
+  passportAuth.authenticate,
+  authorization.hasRole("admin"),
+  userController.assignRole
+);
+
 export default router;

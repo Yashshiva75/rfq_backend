@@ -6,6 +6,8 @@ import updateRfq from "../service/updateRfq.service";
 import publishRfq from "../service/publishRfq.service";
 import deleteRfq from "../service/deleteRfq.service";
 import compareRfqQuotes from "../service/compareRfqQuotes.service";
+import searchRfq from "../service/searchRfq.service";
+import navigationSummary from "../service/navigationSummary.service";
 
 // Import Helpers
 import responseHelper from "../../../helpers/response.helper";
@@ -278,6 +280,69 @@ class RfqController {
       //
       // send the response
       //
+      res
+        .status(StatusCodes.OK)
+        .json(await responseHelper.successResponse(container.output));
+    } catch (error: any) {
+      res
+        .status(await responseHelper.getStatusCode(error))
+        .json(await responseHelper.validationErrorResponse(error));
+    }
+  }
+
+  /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
+  🔱: @author : Yash shiva
+  ✨: @uses : Global search across RFQs, Line Items, and Categories
+  👑: @created : 16/10/2026
+  ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
+  async search(req: any, res: Response, next?: NextFunction) {
+    try {
+      const container: any = {
+        input: {
+          query: req.query,
+          params: req.params,
+          headers: req.headers,
+          logged_in_user: req.logged_in_user || req.user,
+        },
+        derived: {},
+        output: {
+          result: {},
+        },
+      };
+
+      await searchRfq(container);
+
+      res
+        .status(StatusCodes.OK)
+        .json(await responseHelper.successResponse(container.output));
+    } catch (error: any) {
+      res
+        .status(await responseHelper.getStatusCode(error))
+        .json(await responseHelper.validationErrorResponse(error));
+    }
+  }
+
+  /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
+  🔱: @author : Yash shiva
+  ✨: @uses : Navigation summary badge counts and category counts
+  👑: @created : 16/10/2026
+  ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
+  async navigationSummary(req: any, res: Response, next?: NextFunction) {
+    try {
+      const container: any = {
+        input: {
+          query: req.query,
+          headers: req.headers,
+          logged_in_user: req.logged_in_user || req.user,
+        },
+        derived: {},
+        output: {
+          result: {},
+        },
+      };
+
+      await navigationSummary(container);
+
       res
         .status(StatusCodes.OK)
         .json(await responseHelper.successResponse(container.output));

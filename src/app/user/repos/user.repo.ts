@@ -202,7 +202,15 @@ class UserRepo {
         prisma.user.findMany({
           where: filters,
           include: {
-            role: true,
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
           },
           orderBy: {
             createdAt: "desc",
@@ -221,6 +229,33 @@ class UserRepo {
         page,
         perPage,
       };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
+  🔱: @author : Yash shiva
+  ✨: @uses : Assign role to user
+  👑: @created : 16/10/2026
+  ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
+  async assignRoleToUser(userId: number, roleId: number) {
+    try {
+      return await prisma.user.update({
+        where: { id: userId },
+        data: { roleId },
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
+        },
+      });
     } catch (error) {
       throw error;
     }

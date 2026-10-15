@@ -43,6 +43,50 @@ class FileRepo {
 
   /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
   🔱: @author : Yash shiva
+  ✨: @uses : Get file by ID with relations
+  👑: @created : 16/10/2026
+  ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
+  async getFileById(id: number) {
+    try {
+      return await prisma.file.findUnique({
+        where: { id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          rfq: {
+            select: {
+              id: true,
+              createdById: true,
+              title: true,
+            },
+          },
+          quotation: {
+            select: {
+              id: true,
+              vendorId: true,
+              rfqId: true,
+              quoteNo: true,
+              rfq: {
+                select: {
+                  createdById: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
+  🔱: @author : Yash shiva
   ✨: @uses : Record file attachment metadata
   👑: @created : 15/10/2026
   ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
@@ -57,6 +101,21 @@ class FileRepo {
           rfqId: data.rfqId,
           quotationId: data.quotationId,
         },
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /*✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯
+  🔱: @author : Yash shiva
+  ✨: @uses : Delete file metadata
+  👑: @created : 16/10/2026
+  ✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯✯*/
+  async deleteFile(id: number) {
+    try {
+      return await prisma.file.delete({
+        where: { id },
       });
     } catch (error) {
       throw error;

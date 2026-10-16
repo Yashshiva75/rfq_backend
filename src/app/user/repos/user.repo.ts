@@ -48,6 +48,8 @@ class UserRepo {
 
       return user;
     } catch (error) {
+      console.error("getUserByEmail failed:", error);
+
       throw error;
     }
   }

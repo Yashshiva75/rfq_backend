@@ -8,30 +8,6 @@
 
 ---
 
-## 📋 Assignment Specification & Required Structure
-
-> **Assignment Brief**:  
-> *Write a short design document (a Markdown file in the repo, a PDF or a Google Doc). We suggest writing it before you start coding, since it will guide your build. You will submit it together with the code and the video in a single submission. It should contain these sections:*
-
-| # | Section | What We Expect | Implementation Reference |
-|---|---|---|---|
-| **1** | **Requirement understanding** | The problem in your own words, the main user flows per role, what is in scope and what is out of scope. | [Section 1: Requirement Understanding](#1-requirement-understanding) |
-| **2** | **Assumptions and open questions** | Every assumption you made where the requirement was unclear, with a one-line reason. | [Section 2: Assumptions and Open Questions](#2-assumptions-and-open-questions) |
-| **3** | **Tech stack and reasoning** | Frontend, backend, database, file storage, deployment. Why each, and what you considered instead. | [Section 3: Tech Stack and Reasoning](#3-tech-stack-and-reasoning) |
-| **4** | **Architecture and services** | The components needed (app, database, file storage, background jobs, cache, anything else) and how they talk to each other. A simple diagram is enough. | [Section 4: Architecture and Services](#4-architecture-and-services) |
-| **5** | **Database model** | An ER diagram or table definitions with keys, constraints and important indexes. Explain how you store line items, quote revisions, status history and money. | [Section 5: Database Model](#5-database-model) |
-| **6** | **API design** | List of endpoints with method, path, role allowed, and a short purpose. Include request and response examples for the 3 most important ones. | [Section 6: API Design](#6-api-design) |
-| **7** | **Key flows** | Step by step for: submitting a quote before the deadline, rejecting a late quote, awarding an RFQ. | [Section 7: Key Flows](#7-key-flows) |
-| **8** | **Security and access control** | How roles are enforced, how one vendor is prevented from reading another vendor's data, how file uploads are made safe. | [Section 8: Security and Access Control](#8-security-and-access-control) |
-| **9** | **Test cases** | The test cases you thought of for the main flows and edge cases. Mark which ones you implemented and which ones you would add with more time. | [Section 9: Test Cases](#9-test-cases) |
-| **10** | **Scalability and next steps** | What breaks first at 100x load, what you would change, and what you skipped on purpose. | [Section 10: Scalability and Next Steps](#10-scalability-and-next-steps) |
-
-> **Design Evolution Note**:  
-> *You may update the design document while coding. If the final code differs from your design, add a short note on what changed and why. That is normal and we like to see it.*  
-> ➔ See [Section 11: Design Evolution & Build Notes](#11-design-evolution--build-notes) for deviations, design learnings, and runtime enhancements made during development.
-
----
-
 ## 1. Requirement Understanding
 
 ### 1.1 The Problem in Our Own Words

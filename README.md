@@ -8,18 +8,7 @@
 
 ---
 
-## 1. Requirement Understanding
-
-### 1.1 The Problem in Our Own Words
-Procurement workflows in modern enterprises are often fragmented across email chains, disparate spreadsheets, and uncoordinated negotiations. This lack of structure leads to data leakage, vendor collusion, missed deadlines, and suboptimal award decisions. 
-
-The **Mini RFQ Portal** is a secure, role-based B2B procurement platform that digitizes and standardizes the entire procurement lifecycle:
-1. **Buyers** publish detailed requests with multi-item line requirements, delivery locations, specifications, and strict deadlines.
-2. **Vendors** discover relevant business opportunities, review requirements, submit binding itemized quotes with delivery commitments, and revise quotes prior to deadline cutoff.
-3. **Sealed-Bid Integrity** ensures competing vendors cannot view rival offers during the bidding window.
-4. **Post-Deadline Evaluation & Atomic Award** enables buyers to compare quotes side-by-side (sorting by price or delivery schedule) and execute an atomic award that officially declares a winner and auto-rejects competing bids.
-
-### 1.2 Main User Flows per Role
+### 1.1 Main User Flows per Role
 
 ```
    ┌──────────────────────────────────────────────────────────────┐
@@ -514,13 +503,6 @@ To focus development effort within the assigned timeline on delivering full end-
 | **TC-11** | Admin RBAC | Admin assigns roles & updates action permissions | Postman & UI | Verified |
 | **TC-12** | Global Search | Autocomplete matches across RFQs, Line Items & Categories | Postman & UI | Verified |
 
-### 9.2 Tests Recommended for Future Automated Suites (With More Time)
-With additional engineering time, an automated test framework (such as Vitest or Jest + Supertest) and CI/CD pipelines would be added to automate:
-* **Automated Unit & Service Test Scripts**: Runner commands (`npm test`) testing service layer logic, deadline calculations, and repository helpers in isolation.
-* **Concurrent Revision Race Conditions**: Testing 50 concurrent revisions on the same quote using optimistic concurrency controls.
-* **High-Throughput Load Testing**: Simulating 1,000 vendors submitting bids in the final 5 minutes before deadline using k6 or Artillery.
-* **End-to-End Browser Journeys**: Full automated browser walkthrough with Playwright / Cypress.
-
 ## 10. Scalability and Next Steps
 
 ### 10.1 What Breaks First at 100x Load
@@ -595,8 +577,4 @@ The accompanying walkthrough video covers:
 4. **Evaluation & Award (2.5 mins)**: Buyer side-by-side comparison matrix, sorting by total cost vs delivery speed, executing atomic award, and showing automatic rejection of competing quotes.
 5. **Admin RBAC & Audit Trail (1 min)**: Dynamic role assignment, action permissions, and audit log inspection.
 
-### 12.4 Final Submission Package (tech@bidveda.in)
-- [x] **Deliverable 1**: Complete System Design Document in Repository (`DESIGN.md`) and Compiled PDF (`DESIGN.pdf`).
-- [x] **Deliverable 2**: Full GitHub Repository with Backend, Frontend, Prisma Migrations, Seed Data, and Verification Runbook.
-- [x] **Deliverable 3**: 5-10 Minute Walkthrough Screen Share Video.
 
